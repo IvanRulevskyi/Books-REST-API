@@ -7,12 +7,13 @@ use App\Models\Author;
 
 class AuthorService
 {
-    public function createAuthor(AuthorRequest $request)
+    public function createAuthor(array $data): Author
     {
-        return Author::create($request->all());
+        return Author::create($data);
     }
+
     public function getAuthors()
     {
-        return Author::all();
+        return Author::paginate(3);
     }
 }

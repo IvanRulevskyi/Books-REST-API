@@ -2,57 +2,81 @@
 
 namespace App\Services;
 
-use App\Http\Requests\BookRequest;
+
 use App\Models\Author;
 use App\Models\Book;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
+
 
 class BookService
 {
-    public function createBook(BookRequest $request)
+    public function createBook($data)
     {
         $book = Book::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'publication_date' => $request->publication_date,
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'publication_date' => $data['publication_date']
         ]);
-        $book->authors()->attach($request->author_id);;
+        if (isset($data['image_path'])) {
+            $imageName = 'book_' . time() . '.' . $data['image_path']->getClientOriginalExtension();
+            $data['image_path']->storeAs('public/images', $imageName);
+            $book->image_path = asset('storage/images/' . $imageName);
+            $book->save();
+        }
+        $book->authors()->attach($data['author_id']);
+
         return $book;
     }
 
-    public function getBooks()
+    public function getBooks(): LengthAwarePaginator
     {
-        return Book::all();
+        return Book::query()->paginate(5);
     }
 
-    public function searchBooksByAuthor($surname)
+    public function searchBooksByAuthor(string $surname)
     {
         $author = Author::where('surname', $surname)->first();
         if ($author) {
-            return $author->books;
+            return $author->books()->paginate(2);
+
         }
-        return false;
+        return null;
     }
 
-    public function getBook($id)
+    public function getBook(int $id)
     {
         $book = Book::where('id', $id)->first();
         if ($book) {
             return $book;
         }
-        return false;
+        return null;
     }
-    public function updateBook($request, $id)
+    public function updateBook($data, int $id)
     {
         $book = Book::find($id);
         if (!$book) {
-            return false;
+            return null;
         }
         $book->update([
-            'title' => $request->title,
-            'description' => $request->description,
-            'publication_date' => $request->publication_date,
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'publication_date' => $data['publication_date'],
         ]);
-        $book->authors()->sync($request->author_id);
+
+        if (isset($data['image_path'])) {
+            if ($book->image_path) {
+                Storage::delete(str_replace('storage/', 'public/', $book->image_path));
+            }
+            $imageName = 'book_' . time() . '.' . $data['image_path']->getClientOriginalExtension();
+            $data['image_path']->storeAs('public/images', $imageName);
+            $book->image_path = asset('storage/images/' . $imageName);
+            $book->save();
+        }
+        if (isset($data['author_id'])) {
+            $book->authors()->sync($data['author_id']);
+        }
         return $book;
     }
+
 }

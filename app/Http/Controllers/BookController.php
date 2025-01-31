@@ -4,48 +4,56 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\BookRequest;
 use App\Services\BookService;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class BookController extends Controller
 {
-    protected $bookService;
-    public function __construct(BookService $bookService)
+    public function __construct(private readonly BookService $bookService)
     {
-        $this->bookService = $bookService;
     }
 
-    public function store(BookRequest $request)
+    //create book
+    public function store(BookRequest $request): JsonResponse
     {
-        $book = $this->bookService->createBook($request);
-        return response()->json($book, 201);
+        $data = $request->all();
+        return response()->json($this->bookService->createBook($data), Response::HTTP_CREATED);
     }
-    public function index()
+
+    //get all book
+    public function index(): JsonResponse
     {
-        $books = $this->bookService->getBooks();
-        return response()->json($books, 200);
+        return response()->json($this->bookService->getBooks(), Response::HTTP_OK);
     }
-    public function searchByAuthor($surname)
+
+    //search book by author patronymic
+    public function searchByAuthor(string $surname): JsonResponse
     {
         $books = $this->bookService->searchBooksByAuthor($surname);
         if ($books) {
             return response()->json($books);
         }
-        return response()->json(['message' => 'Author not found'], 404);
+        return response()->json(['message' => 'Author not found'], Response::HTTP_NOT_FOUND);
     }
-    public function show($id)
+
+    //get one book
+    public function show(int $id): JsonResponse
     {
         $book = $this->bookService->getBook($id);
         if ($book) {
             return response()->json($book);
         }
-        return response()->json(['message' => 'Book not found'], 404);
+        return response()->json(['message' => 'Book not found'], Response::HTTP_NOT_FOUND);
     }
-    public function update(BookRequest $request, $id)
+
+    //update book
+    public function update(BookRequest $request, int $id): JsonResponse
     {
-        $book = $this->bookService->updateBook($request, $id);
+        $data = $request->all();
+        $book = $this->bookService->updateBook($data, $id);
         if ($book) {
             return response()->json($book);
         }
-        return response()->json(['message' => 'Book not found'], 404);
+        return response()->json(['message' => 'Book not found'], Response::HTTP_NOT_FOUND);
     }
-
 }
